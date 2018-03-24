@@ -30,7 +30,7 @@ public class Controller {
 	
 	@FXML private ImageView imageView; // the image display window in the GUI
 	@FXML private Slider slider;
-	@FXML private Button openButton;
+	@FXML private Button imageButton;
 	@FXML private Button playButton;
 	
 	private VideoCapture capture;   
@@ -40,8 +40,6 @@ public class Controller {
 
 	
 	private String getImageFilename() {
-		// This method should return the filename of the image to be played
-		// You should insert your code here to allow user to select the file
 //	    FileChooser fileName = new FileChooser();
 //	    fileName.setTitle("Select Video:");
 //	    File file = fileName.showOpenDialog(new Stage());
@@ -50,7 +48,8 @@ public class Controller {
 //	    	return null;
 //
 //	    return file.getAbsolutePath();
-		
+
+		//this defaults to the video in resources to make it easier
 		return "resources/WipeVideoTestLower.mov";
 	}
 	
@@ -58,24 +57,33 @@ public class Controller {
 	@FXML
 	protected void openImage(ActionEvent event) throws InterruptedException {
 		// This method opens an image and display it using the GUI
-		// You should modify the logic so that it opens and displays a video
+
+		//this will reset framesArray when another video is loaded
+		if(framesArray.size() != 0) {
+			framesArray = new ArrayList<Mat>();
+			colourBuckets = new double[7][7];
+		}
 		
 		 capture = new VideoCapture(getImageFilename()); // open video file  
 		 if (capture.isOpened()) { // open successfully
-			 createFrameGrabber();
+			 createFrameGrabber(); //plays video
 		 }
 	}
-	
+
+	// this just plays the video
 	protected void createFrameGrabber() throws InterruptedException {   
 		if (capture != null && capture.isOpened()) { // the video must be open     
 			double framePerSecond = capture.get(Videoio.CAP_PROP_FPS);
 			
-			// create a runnable to fetch new frames periodically     
+			// create a runnable to fetch new frames periodically
+
 			Runnable frameGrabber = new Runnable() {
 				@Override public void run() {
 					Mat frame = new Mat();           
 					if (capture.read(frame)) { // decode successfully
 						Image im = Utilities.mat2Image(frame);
+						//collects frames from entire video
+						//video must run all the way through for all frames to be added to array
 						framesArray.add(frame);
 
 						Utilities.onFXThread(imageView.imageProperty(), im);              
@@ -86,66 +94,107 @@ public class Controller {
 					} else { // reach the end of the video             
 							//capture.set(Videoio.CAP_PROP_POS_FRAMES, 0);
 							capture.release();
+							return;
 						}
-
 					}
 				};
 
-			
-      // terminate the timer if it is running      
-    if (timer != null && !timer.isShutdown()) {       
-    	timer.shutdown();       
-    	timer.awaitTermination(Math.round(1000/framePerSecond), TimeUnit.MILLISECONDS);     
-    	}        
-    // run the frame grabber    
-    timer = Executors.newSingleThreadScheduledExecutor();     
-    timer.scheduleAtFixedRate(frameGrabber, 0, Math.round(1000/framePerSecond), TimeUnit.MILLISECONDS); 
-	} 
+			//Not sure what this does but don't touch it
 
+     		 // terminate the timer if it is running
+			if (timer != null && !timer.isShutdown()) {
+				timer.shutdown();
+				timer.awaitTermination(Math.round(1000/framePerSecond), TimeUnit.MILLISECONDS);
+			}
+			// run the frame grabber
+			timer = Executors.newSingleThreadScheduledExecutor();
+			timer.scheduleAtFixedRate(frameGrabber, 0, Math.round(1000/framePerSecond), TimeUnit.MILLISECONDS);
+			}
 	};
 
 
 	@FXML
 	protected void checkColours(ActionEvent event) throws LineUnavailableException {
 		// This method "plays" the image opened by the user
-		System.out.println("Warning, this will take a few seconds to load");
+		System.out.println("Warning, this will take a long time (10+ seconds)");
 
-		//look at last slide of scanned files-> week11.pdf -> last page -> 2c ii)
+		//look at last slide of scanned files-> week11.pdf -> last page -> 2c ii) for information about project
+
 		int frameLength = framesArray.size();
-		for(int i=0; i<frameLength; i++) {
-			Mat frame = framesArray.get(i);
-			int rowSize = frame.rows();
-			int colSize = frame.cols();
+		for(int i=0; i<frameLength-1; i++) {
+
+			//gets first frame and the frame after
+			Mat firstFrame = framesArray.get(i);
+			Mat afterFrame = framesArray.get(i+1);
+
+			//get ready to make 2 new histograms
+			double[][] firstHistogram = new double[7][7];
+			double[][] secondHistogram = new double[7][7];
+
+			//dimensions of video
+			int rowSize = firstFrame.rows();
+			int colSize = firstFrame.cols();
+
+			//gets full pixel count
+			double pixelCount = (double) rowSize*colSize;
+
 			for(int row=0; row<rowSize; row++) {
 				for(int col=0; col<colSize; col++) {
-					double[] rgb = frame.get(row, col);
-					double[] chromaticity = this.getChromaticity(rgb);
+					//histogram for firstFrame or frame@(t)
+					double[] rgbFirst = firstFrame.get(row, col);
+					double[] chromaticityFirst = this.getChromaticity(rgbFirst); //get r and g chromaticity values
+					int positionRedFirst = (int) Math.floor(chromaticityFirst[0] * 6);
+					int positionGreenFirst = (int) Math.floor(chromaticityFirst[1] * 6);
+					firstHistogram[positionRedFirst][positionGreenFirst]++;
 
-					//making data for graph in the 7x7 matrix
-					int positionR = (int) Math.floor(chromaticity[0] * 6);
-					int positionG = (int) Math.floor(chromaticity[1] * 6);
-					colourBuckets[positionR][positionG]++;
+					//histogram for afterFrame or frame@(t+1)
+					double[] rgbSecond = afterFrame.get(row, col);
+					double[] chromaticitySecond = this.getChromaticity(rgbSecond); //get r and g chromaticity values
+					int positionRedSecond = (int) Math.floor(chromaticitySecond[0] * 6);
+					int positionGreenSecond = (int) Math.floor(chromaticitySecond[1] * 6);
+					secondHistogram[positionRedSecond][positionGreenSecond]++;
 				}
 			}
+			//finds min value between 2 histograms[i][j] and stores in colourBuckets array
+			this.compareHistograms(firstHistogram, secondHistogram, pixelCount);
 		}
 
+		//just prints values. Can be commented out
 		for(int i=0; i<7; i++) {
 			for(int j=0; j<7; j++) {
 				System.out.print(colourBuckets[i][j]+" ");
 			}
 			System.out.println("");
 		}
+
+		//make histogram
+//		Imgproc.calcHist();
 	}
 
 	//self-explanatory value
 	private double[] getChromaticity(double[] pixelRGB) {
 		double[] chromaticity = new double[2];
+
+		//pixelRGB indices follow RGB => 0 -> R, 1 -> G, 2 -> B
 		double r = pixelRGB[0]/(pixelRGB[0]+pixelRGB[1]+pixelRGB[2]);
 		double g = pixelRGB[1]/(pixelRGB[0]+pixelRGB[1]+pixelRGB[2]);
 		chromaticity[0] = r;
 		chromaticity[1] = g;
 
-		return chromaticity;
+		return chromaticity; //returns array of 2 values for r, g
+	}
 
+	private void compareHistograms(double[][] firstHistogram, double[][] secondHistogram, double pixelTotal) {
+		//pixelTotal has to be used to divide, to normalize value
+		for(int i=0; i<7; i++) {
+			for(int j=0; j<7; j++) {
+				if (firstHistogram[i][j] < secondHistogram[i][j]) {
+					colourBuckets[i][j] = (firstHistogram[i][j]/pixelTotal);
+				} else {
+					colourBuckets[i][j] = (secondHistogram[i][j]/pixelTotal);
+				}
+
+			}
+		}
 	}
 }
