@@ -6,11 +6,9 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.lang.*;
 
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.SourceDataLine;
 
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
@@ -37,41 +35,9 @@ public class Controller {
 	
 	private VideoCapture capture;   
 	private ScheduledExecutorService timer;
-	private Mat image;
 	private List<Mat> framesArray = new ArrayList<Mat>();
-	private int width;
-	private int height;
-	private int sampleRate; // sampling frequency
-	private int sampleSizeInBits;
-	private int numberOfChannels;
-	private double[] freq; // frequencies for each particular row
-	private int numberOfQuantizionLevels;
-	private int numberOfSamplesPerColumn;
-	
-	@FXML
-	private void initialize() {
-		// Optional: You should modify the logic so that the user can change these values
-		// You may also do some experiments with different values
-		width = 64;
-		height = 64;
-		sampleRate = 8000;
-		sampleSizeInBits = 8;
-		numberOfChannels = 1;
-		
-		numberOfQuantizionLevels = 16;
-		
-		numberOfSamplesPerColumn = 125;
-		
-		// assign frequencies for each particular row
-		freq = new double[height]; // Be sure you understand why it is height rather than width
-		freq[height/2-1] = 440.0; // 440KHz - Sound of A (La)
-		for (int m = height/2; m < height; m++) {
-			freq[m] = freq[m-1] * Math.pow(2, 1.0/12.0); 
-		}
-		for (int m = height/2-2; m >=0; m--) {
-			freq[m] = freq[m+1] * Math.pow(2, -1.0/12.0); 
-		}
-	}
+	private double[][] colourBuckets = new double[7][7];
+
 	
 	private String getImageFilename() {
 		// This method should return the filename of the image to be played
@@ -109,12 +75,9 @@ public class Controller {
 				@Override public void run() {
 					Mat frame = new Mat();           
 					if (capture.read(frame)) { // decode successfully
-						Image im = Utilities.mat2Image(frame); 
-						double frameNumber = capture.get(Videoio.CAP_PROP_POS_FRAMES);
-						if(frameNumber%30==0) {
-							framesArray.add(frame);
-						}
-						image = frame;
+						Image im = Utilities.mat2Image(frame);
+						framesArray.add(frame);
+
 						Utilities.onFXThread(imageView.imageProperty(), im);              
 						double currentFrameNumber = capture.get(Videoio.CAP_PROP_POS_FRAMES);
 						double totalFrameCount = capture.get(Videoio.CAP_PROP_FRAME_COUNT);             
@@ -143,24 +106,46 @@ public class Controller {
 
 
 	@FXML
-	protected void playImage(ActionEvent event) throws LineUnavailableException {
+	protected void checkColours(ActionEvent event) throws LineUnavailableException {
 		// This method "plays" the image opened by the user
+		System.out.println("Warning, this will take a few seconds to load");
 
-		double[] rgb = framesArray.get(3).get(100,220);
-		int rows = framesArray.get(3).rows();
-		int cols = framesArray.get(3).cols();
-		System.out.println(rows);
-		System.out.println(cols);
-		System.out.println(rgb.length);
-		this.getRGBValues(rgb);
+		//look at last slide of scanned files-> week11.pdf -> last page -> 2c ii)
+		int frameLength = framesArray.size();
+		for(int i=0; i<frameLength; i++) {
+			Mat frame = framesArray.get(i);
+			int rowSize = frame.rows();
+			int colSize = frame.cols();
+			for(int row=0; row<rowSize; row++) {
+				for(int col=0; col<colSize; col++) {
+					double[] rgb = frame.get(row, col);
+					double[] chromaticity = this.getChromaticity(rgb);
 
+					//making data for graph in the 7x7 matrix
+					int positionR = (int) Math.floor(chromaticity[0] * 6);
+					int positionG = (int) Math.floor(chromaticity[1] * 6);
+					colourBuckets[positionR][positionG]++;
+				}
+			}
+		}
 
+		for(int i=0; i<7; i++) {
+			for(int j=0; j<7; j++) {
+				System.out.print(colourBuckets[i][j]+" ");
+			}
+			System.out.println("");
+		}
 	}
 
 	//self-explanatory value
-	private void getRGBValues(double[] pixelRGB) {
-		System.out.println("red "+pixelRGB[0]);
-		System.out.println("green "+pixelRGB[1]);
-		System.out.println("blue "+pixelRGB[2]);
+	private double[] getChromaticity(double[] pixelRGB) {
+		double[] chromaticity = new double[2];
+		double r = pixelRGB[0]/(pixelRGB[0]+pixelRGB[1]+pixelRGB[2]);
+		double g = pixelRGB[1]/(pixelRGB[0]+pixelRGB[1]+pixelRGB[2]);
+		chromaticity[0] = r;
+		chromaticity[1] = g;
+
+		return chromaticity;
+
 	}
 }
