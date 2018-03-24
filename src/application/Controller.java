@@ -38,7 +38,6 @@ public class Controller {
 	private VideoCapture capture;   
 	private ScheduledExecutorService timer;
 	private Mat image;
-	private boolean isEven = false;
 	private List<Mat> framesArray = new ArrayList<Mat>();
 	private int width;
 	private int height;
@@ -96,16 +95,9 @@ public class Controller {
 		// You should modify the logic so that it opens and displays a video
 		
 		 capture = new VideoCapture(getImageFilename()); // open video file  
-		 if (capture.isOpened()) { // open successfully   
-			 
+		 if (capture.isOpened()) { // open successfully
 			 createFrameGrabber();
-			 
 		 }
-		 
-		// You don't have to understand how mat2Image() works. 
-		// In short, it converts the image from the Mat format to the Image format
-		// The Mat format is used by the opencv library, and the Image format is used by JavaFX
-		// BTW, you should be able to explain briefly what opencv and JavaFX are after finishing this assignment
 	}
 	
 	protected void createFrameGrabber() throws InterruptedException {   
@@ -148,25 +140,8 @@ public class Controller {
 	} 
 
 	};
-	
-	protected void playBeep() throws LineUnavailableException {
-		AudioFormat audioFormat = new AudioFormat(sampleRate, sampleSizeInBits, numberOfChannels, true, true);
-        SourceDataLine sourceDataLine = AudioSystem.getSourceDataLine(audioFormat);
-        sourceDataLine.open(audioFormat, sampleRate);
-        sourceDataLine.start();
-        
-        byte[] beepNoise = new byte[3];
-        beepNoise[0] = (byte) 900;
-        beepNoise[1] = (byte) 900;
-        beepNoise[2] = (byte) 900;
-		sourceDataLine.write(beepNoise, 0, 3);
-		
-		sourceDataLine.drain();
-        sourceDataLine.close();
-	}
-	
-	
-	
+
+
 	@FXML
 	protected void playImage(ActionEvent event) throws LineUnavailableException {
 		// This method "plays" the image opened by the user
@@ -217,14 +192,7 @@ public class Controller {
 	
 	            	sourceDataLine.write(audioBuffer, 0, numberOfSamplesPerColumn);
 	            }
-	            
-	            //Beep every 2 frames
-	            if (isEven) {
-	                 playBeep();
-	                 isEven = false;
-	            } else {
-	            	isEven = true;
-	            }
+
 	           
 	            sourceDataLine.drain();
 	            sourceDataLine.close();
