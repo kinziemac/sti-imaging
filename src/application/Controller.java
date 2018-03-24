@@ -76,16 +76,16 @@ public class Controller {
 	private String getImageFilename() {
 		// This method should return the filename of the image to be played
 		// You should insert your code here to allow user to select the file
-	    FileChooser fileName = new FileChooser();
-	    fileName.setTitle("Select Video:");
-	    File file = fileName.showOpenDialog(new Stage());
-
-	    if(file == null)
-	    	return null;
-
-	    return file.getAbsolutePath();
+//	    FileChooser fileName = new FileChooser();
+//	    fileName.setTitle("Select Video:");
+//	    File file = fileName.showOpenDialog(new Stage());
+//
+//	    if(file == null)
+//	    	return null;
+//
+//	    return file.getAbsolutePath();
 		
-		//return "resources/test.mp4";
+		return "resources/WipeVideoTestLower.mov";
 	}
 	
 	
@@ -105,8 +105,7 @@ public class Controller {
 			double framePerSecond = capture.get(Videoio.CAP_PROP_FPS);
 			
 			// create a runnable to fetch new frames periodically     
-			Runnable frameGrabber = new Runnable() {    
-
+			Runnable frameGrabber = new Runnable() {
 				@Override public void run() {
 					Mat frame = new Mat();           
 					if (capture.read(frame)) { // decode successfully
@@ -123,11 +122,12 @@ public class Controller {
 					
 					} else { // reach the end of the video             
 							//capture.set(Videoio.CAP_PROP_POS_FRAMES, 0);
-							
 							capture.release();
-						} 
+						}
+
 					}
 				};
+
 			
       // terminate the timer if it is running      
     if (timer != null && !timer.isShutdown()) {       
@@ -145,59 +145,22 @@ public class Controller {
 	@FXML
 	protected void playImage(ActionEvent event) throws LineUnavailableException {
 		// This method "plays" the image opened by the user
-		// You should modify the logic so that it plays a video rather than an image
-		
-		int arraySize = framesArray.size();
-		for(int index=0;index<arraySize;index++) {
-			image = framesArray.get(index);
-			
-			if (image != null) {
-				// convert the image from RGB to grayscale
-				Mat grayImage = new Mat();
-				Imgproc.cvtColor(image, grayImage, Imgproc.COLOR_BGR2GRAY);
-				
-				// resize the image
-				Mat resizedImage = new Mat();
-				Imgproc.resize(grayImage, resizedImage, new Size(width, height));
-				
-				// quantization
-				double[][] roundedImage = new double[resizedImage.rows()][resizedImage.cols()];
-				for (int row = 0; row < resizedImage.rows(); row++) {
-					for (int col = 0; col < resizedImage.cols(); col++) {
-						roundedImage[row][col] = (double)Math.floor(resizedImage.get(row, col)[0]/numberOfQuantizionLevels) / numberOfQuantizionLevels;
-					}
-				}
-				
-				// I used an AudioFormat object and a SourceDataLine object to perform audio output. Feel free to try other options
-		        AudioFormat audioFormat = new AudioFormat(sampleRate, sampleSizeInBits, numberOfChannels, true, true);
-	            SourceDataLine sourceDataLine = AudioSystem.getSourceDataLine(audioFormat);
-	            sourceDataLine.open(audioFormat, sampleRate);
-	            sourceDataLine.start();
-	          
-	            
-	            //this is just for one frame
-	            for (int col = 0; col < width; col++) {
-	            	byte[] audioBuffer = new byte[numberOfSamplesPerColumn];
-	            	for (int t = 1; t <= numberOfSamplesPerColumn; t++) {
-	            		double signal = 0;
-	                	for (int row = 0; row < height; row++) {
-	                		int m = height - row - 1; // Be sure you understand why it is height rather width, and why we subtract 1 
-	                		int time = t + col * numberOfSamplesPerColumn;
-	                		double ss = Math.sin(2 * Math.PI * freq[m] * (double)time/sampleRate);
-	                		signal += roundedImage[row][col] * ss;
-	                	}
-	                	double normalizedSignal = signal / height; // signal: [-height, height];  normalizedSignal: [-1, 1]
-	                	audioBuffer[t-1] = (byte) (normalizedSignal*0x7F); // Be sure you understand what the weird number 0x7F is for
-	            	}
-	
-	            	sourceDataLine.write(audioBuffer, 0, numberOfSamplesPerColumn);
-	            }
 
-	           
-	            sourceDataLine.drain();
-	            sourceDataLine.close();
-			}
-		}
-		
-	} 
+		double[] rgb = framesArray.get(3).get(100,220);
+		int rows = framesArray.get(3).rows();
+		int cols = framesArray.get(3).cols();
+		System.out.println(rows);
+		System.out.println(cols);
+		System.out.println(rgb.length);
+		this.getRGBValues(rgb);
+
+
+	}
+
+	//self-explanatory value
+	private void getRGBValues(double[] pixelRGB) {
+		System.out.println("red "+pixelRGB[0]);
+		System.out.println("green "+pixelRGB[1]);
+		System.out.println("blue "+pixelRGB[2]);
+	}
 }
