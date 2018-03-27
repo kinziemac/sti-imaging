@@ -51,6 +51,7 @@ public class Controller {
 	private ScheduledExecutorService timer;
 	private List<Mat> framesArray = new ArrayList<Mat>();
 	private List<Double> colourBuckets = new ArrayList<Double>();
+	private double[][] columnArray;
 
 	
 	private String getImageFilename() {
@@ -64,7 +65,7 @@ public class Controller {
 //	    return file.getAbsolutePath();
 
 		//this defaults to the video in resources to make it easier
-		return "resources/WipeVideoTest.mov";
+		return "resources/RedVideoWipeLower.mov";
 	}
 	
 	
@@ -133,10 +134,13 @@ public class Controller {
 		System.out.println("Warning, this will take a long time (10+ seconds)");
 
 		//look at last slide of scanned files -> week11.pdf -> last page -> 2c ii) for information about project
-
+		Mat frame = framesArray.get(0);
 		int frameLength = framesArray.size();
-		for(int i=0; i<frameLength-1; i++) {
+		int frameCols = frame.cols();
+		int frameRows = frame.rows();
+		columnArray = new double[frameLength-1][frameCols];
 
+		for(int i=0; i<frameLength-1; i++) {
 			//gets first frame and the frame after
 			Mat firstFrame = framesArray.get(i);
 			Mat afterFrame = framesArray.get(i+1);
@@ -148,77 +152,47 @@ public class Controller {
 			//dimensions of histograms - Sturges' Rule
 			int histogramDimensions = (int) (1.0 + Math.log(rowSize)/Math.log(2));
 
-			//get ready to make 2 new histograms
-			double[][] firstHistogram = new double[histogramDimensions][histogramDimensions];
-			double[][] secondHistogram = new double[histogramDimensions][histogramDimensions];
-
 			//gets full pixel count
 			for(int col=0; col<colSize; col++) {
-				//histogram for firstFrame or frame@(t)
-				//I chose rowSize/2 to get the middle of the image
-				double[] rgbFirst = firstFrame.get((rowSize/2), col);
-				double[] chromaticityFirst = this.getChromaticity(rgbFirst); //get r and g chromaticity values
-				int positionRedFirst = (int) Math.floor(chromaticityFirst[0] * histogramDimensions);
-				int positionGreenFirst = (int) Math.floor(chromaticityFirst[1] * histogramDimensions);
-				firstHistogram[positionRedFirst][positionGreenFirst] += (1.0/colSize);
+				//get ready to make 2 new histograms
+				double[][] firstHistogram = new double[histogramDimensions][histogramDimensions];
+				double[][] secondHistogram = new double[histogramDimensions][histogramDimensions];
 
-				//histogram for afterFrame or frame@(t+1)
-				double[] rgbSecond = afterFrame.get((rowSize/2), col);
-				double[] chromaticitySecond = this.getChromaticity(rgbSecond); //get r and g chromaticity values
-				int positionRedSecond = (int) Math.floor(chromaticitySecond[0] * histogramDimensions);
-				int positionGreenSecond = (int) Math.floor(chromaticitySecond[1] * histogramDimensions);
-				secondHistogram[positionRedSecond][positionGreenSecond] += (1.0/colSize);
+				for(int row=0; row<rowSize; row++) {
+					//histogram for firstFrame or frame@(t)
+					double[] rgbFirst = firstFrame.get(row, col);
+					double[] chromaticityFirst = this.getChromaticity(rgbFirst); //get r and g chromaticity values
+					int positionRedFirst = (int) Math.floor(chromaticityFirst[0] * histogramDimensions);
+					int positionGreenFirst = (int) Math.floor(chromaticityFirst[1] * histogramDimensions);
+				    firstHistogram[positionRedFirst][positionGreenFirst] += (1.0/rowSize);
+					//firstHistogram[positionRedFirst][positionGreenFirst]++;
+
+					//histogram for afterFrame or frame@(t+1)
+					double[] rgbSecond = afterFrame.get(row, col);
+					double[] chromaticitySecond = this.getChromaticity(rgbSecond); //get r and g chromaticity values
+					int positionRedSecond = (int) Math.floor(chromaticitySecond[0] * histogramDimensions);
+					int positionGreenSecond = (int) Math.floor(chromaticitySecond[1] * histogramDimensions);
+					secondHistogram[positionRedSecond][positionGreenSecond] += (1.0/rowSize);
+					//secondHistogram[positionRedSecond][positionGreenSecond]++;
+				}
+				this.compareHistograms(firstHistogram, secondHistogram, histogramDimensions, i, col);
 			}
-
-			//finds min value between 2 histograms[i][j] and stores in colourBuckets array
-			this.compareHistograms(firstHistogram, secondHistogram, colSize, histogramDimensions);
 		}
-		int colourLength = colourBuckets.size();
-		for(int i=0; i<colourLength; i++) {
-			System.out.println(colourBuckets.get(i));
+		for(int m=0; m<frameLength-1; m++) {
+			for (int n=0; n<frameCols; n++) {
+				if (columnArray[m][n] >= 0.7) {
+					System.out.print(1+" ");
+				} else {
+					System.out.print(0+" ");
+				}
+			}
+			System.out.println("");
 		}
-
-
-		//make histogram
-
 	}
 
-
-	//self-explanatory value
-	private double[] getChromaticity(double[] pixelRGB) {
-		double[] chromaticity = new double[2];
-
-		//pixelRGB indices follow RGB => 0 -> R, 1 -> G, 2 -> B
-		double newRGB = (pixelRGB[0]+pixelRGB[1]+pixelRGB[2]);
-		double r, g;
-
-		if (newRGB == 0) {
-			r = 0;
-			g = 0;
-		} else {
-			r = pixelRGB[0]/newRGB;
-			g = pixelRGB[1]/newRGB;
-		}
-
-		//If colours are a pure red or green it causes an error.
-		//These if statements just slightly reduce the chromacity so there isn't an error.
-		if (r == 1) {
-			r = 0.9999;
-		}
-		if (g == 1) {
-			g = 0.9999;
-		}
-
-		chromaticity[0] = r;
-		chromaticity[1] = g;
-
-		return chromaticity; //returns array of 2 values for r, g
-	}
-
-	private void compareHistograms(double[][] firstHistogram, double[][] secondHistogram, int pixelCount, int histogramLength) {
-
+	private void compareHistograms(double[][] firstHistogram, double[][] secondHistogram, int histogramLength, int frame, int column) {
 		//pixelTotal has to be used to divide, to normalize value
-		double intersection = 0;
+		double intersection = 0.0;
 		for(int i=0; i<histogramLength; i++) {
 			for(int j=0; j<histogramLength; j++) {
 				if (firstHistogram[i][j] < secondHistogram[i][j]) {
@@ -228,9 +202,35 @@ public class Controller {
 				}
 			}
 		}
+		columnArray[frame][column] = intersection;
+	}
 
-		double pixelValue = intersection;
-		colourBuckets.add(pixelValue);
+
+	//self-explanatory value
+	private double[] getChromaticity(double[] pixelRGB) {
+		double[] chromaticity = new double[2];
+
+		//pixelRGB indices follow RGB => B -> 0, G -> 1, R -> 2
+		double newRGB = (pixelRGB[0]+pixelRGB[1]+pixelRGB[2]);
+		double r, g;
+
+		if (newRGB == 0) {
+			r = 0;
+			g = 0;
+		} else {
+			r = pixelRGB[2]/newRGB;
+			g = pixelRGB[1]/newRGB;
+		}
+
+		//If colours are a pure red or green it causes an error.
+		//These if statements just slightly reduce the chromacity so there isn't an error.
+		if (r == 1) r = 0.9999;
+		if (g == 1) g = 0.9999;
+
+		chromaticity[0] = r;
+		chromaticity[1] = g;
+
+		return chromaticity; //returns array of 2 values for r, g
 	}
 
 	public void openWindow() {
