@@ -37,6 +37,14 @@
                         <Font size="17.0" />
                      </font>
                   </Button>
+                  <Button styleClass="openButton" fx:id="newWindowButton" mnemonicParsing="false" onAction="#openWindow" prefHeight="40.0" prefWidth="100.0" text="Open">
+                     <HBox.margin>
+                        <Insets right="20.0" top="20.0" />
+                     </HBox.margin>
+                     <font>
+                        <Font size="17.0" />
+                     </font>
+                  </Button>
                </children>
             </HBox>
          </children>
@@ -60,4 +68,7 @@
          </BorderPane.margin>
       </VBox>
    </center>
+   <top>
+
+   </top>
 </BorderPane>

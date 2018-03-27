@@ -3,6 +3,8 @@ package application;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
+import java.util.logging.Level;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -10,6 +12,7 @@ import java.lang.*;
 
 import javax.sound.sampled.LineUnavailableException;
 
+import javafx.scene.layout.BorderPane;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -18,12 +21,22 @@ import org.opencv.videoio.VideoCapture;
 import org.opencv.videoio.Videoio;
 
 import javafx.event.ActionEvent;
-import javafx.fxml.FXML;
+import javafx.event.EventHandler;
+import javafx.event.Event;
+import javafx.fxml.*;
+import java.io.IOException;
 import javafx.scene.control.Button;
 import javafx.scene.control.Slider;
+import javafx.scene.chart.BarChart;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
+import javafx.scene.Scene;
 import javafx.stage.*;
+import javafx.stage.Stage;
 import utilities.Utilities;
 
 public class Controller {
@@ -32,11 +45,12 @@ public class Controller {
 	@FXML private Slider slider;
 	@FXML private Button imageButton;
 	@FXML private Button playButton;
+	@FXML private Button newWindowButton;
 	
 	private VideoCapture capture;   
 	private ScheduledExecutorService timer;
 	private List<Mat> framesArray = new ArrayList<Mat>();
-	private double[][] colourBuckets = new double[7][7];
+	private List<Double> colourBuckets = new ArrayList<Double>();
 
 	
 	private String getImageFilename() {
@@ -50,7 +64,7 @@ public class Controller {
 //	    return file.getAbsolutePath();
 
 		//this defaults to the video in resources to make it easier
-		return "resources/WipeVideoTestLower.mov";
+		return "resources/WipeVideoTest.mov";
 	}
 	
 	
@@ -61,7 +75,7 @@ public class Controller {
 		//this will reset framesArray when another video is loaded
 		if(framesArray.size() != 0) {
 			framesArray = new ArrayList<Mat>();
-			colourBuckets = new double[7][7];
+			colourBuckets = new ArrayList<Double>();
 		}
 		
 		 capture = new VideoCapture(getImageFilename()); // open video file  
@@ -76,7 +90,6 @@ public class Controller {
 			double framePerSecond = capture.get(Videoio.CAP_PROP_FPS);
 			
 			// create a runnable to fetch new frames periodically
-
 			Runnable frameGrabber = new Runnable() {
 				@Override public void run() {
 					Mat frame = new Mat();           
@@ -85,6 +98,7 @@ public class Controller {
 						//collects frames from entire video
 						//video must run all the way through for all frames to be added to array
 						framesArray.add(frame);
+
 
 						Utilities.onFXThread(imageView.imageProperty(), im);              
 						double currentFrameNumber = capture.get(Videoio.CAP_PROP_POS_FRAMES);
@@ -114,11 +128,11 @@ public class Controller {
 
 
 	@FXML
-	protected void checkColours(ActionEvent event) throws LineUnavailableException {
+	protected void checkColours() {
 		// This method "plays" the image opened by the user
 		System.out.println("Warning, this will take a long time (10+ seconds)");
 
-		//look at last slide of scanned files-> week11.pdf -> last page -> 2c ii) for information about project
+		//look at last slide of scanned files -> week11.pdf -> last page -> 2c ii) for information about project
 
 		int frameLength = framesArray.size();
 		for(int i=0; i<frameLength-1; i++) {
@@ -127,74 +141,150 @@ public class Controller {
 			Mat firstFrame = framesArray.get(i);
 			Mat afterFrame = framesArray.get(i+1);
 
-			//get ready to make 2 new histograms
-			double[][] firstHistogram = new double[7][7];
-			double[][] secondHistogram = new double[7][7];
-
 			//dimensions of video
 			int rowSize = firstFrame.rows();
 			int colSize = firstFrame.cols();
 
+			//dimensions of histograms - Sturges' Rule
+			int histogramDimensions = (int) (1.0 + Math.log(rowSize)/Math.log(2));
+
+			//get ready to make 2 new histograms
+			double[][] firstHistogram = new double[histogramDimensions][histogramDimensions];
+			double[][] secondHistogram = new double[histogramDimensions][histogramDimensions];
+
 			//gets full pixel count
-			double pixelCount = (double) rowSize*colSize;
+			for(int col=0; col<colSize; col++) {
+				//histogram for firstFrame or frame@(t)
+				//I chose rowSize/2 to get the middle of the image
+				double[] rgbFirst = firstFrame.get((rowSize/2), col);
+				double[] chromaticityFirst = this.getChromaticity(rgbFirst); //get r and g chromaticity values
+				int positionRedFirst = (int) Math.floor(chromaticityFirst[0] * histogramDimensions);
+				int positionGreenFirst = (int) Math.floor(chromaticityFirst[1] * histogramDimensions);
+				firstHistogram[positionRedFirst][positionGreenFirst] += (1.0/colSize);
 
-			for(int row=0; row<rowSize; row++) {
-				for(int col=0; col<colSize; col++) {
-					//histogram for firstFrame or frame@(t)
-					double[] rgbFirst = firstFrame.get(row, col);
-					double[] chromaticityFirst = this.getChromaticity(rgbFirst); //get r and g chromaticity values
-					int positionRedFirst = (int) Math.floor(chromaticityFirst[0] * 6);
-					int positionGreenFirst = (int) Math.floor(chromaticityFirst[1] * 6);
-					firstHistogram[positionRedFirst][positionGreenFirst]++;
-
-					//histogram for afterFrame or frame@(t+1)
-					double[] rgbSecond = afterFrame.get(row, col);
-					double[] chromaticitySecond = this.getChromaticity(rgbSecond); //get r and g chromaticity values
-					int positionRedSecond = (int) Math.floor(chromaticitySecond[0] * 6);
-					int positionGreenSecond = (int) Math.floor(chromaticitySecond[1] * 6);
-					secondHistogram[positionRedSecond][positionGreenSecond]++;
-				}
+				//histogram for afterFrame or frame@(t+1)
+				double[] rgbSecond = afterFrame.get((rowSize/2), col);
+				double[] chromaticitySecond = this.getChromaticity(rgbSecond); //get r and g chromaticity values
+				int positionRedSecond = (int) Math.floor(chromaticitySecond[0] * histogramDimensions);
+				int positionGreenSecond = (int) Math.floor(chromaticitySecond[1] * histogramDimensions);
+				secondHistogram[positionRedSecond][positionGreenSecond] += (1.0/colSize);
 			}
+
 			//finds min value between 2 histograms[i][j] and stores in colourBuckets array
-			this.compareHistograms(firstHistogram, secondHistogram, pixelCount);
+			this.compareHistograms(firstHistogram, secondHistogram, colSize, histogramDimensions);
+		}
+		int colourLength = colourBuckets.size();
+		for(int i=0; i<colourLength; i++) {
+			System.out.println(colourBuckets.get(i));
 		}
 
-		//just prints values. Can be commented out
-		for(int i=0; i<7; i++) {
-			for(int j=0; j<7; j++) {
-				System.out.print(colourBuckets[i][j]+" ");
-			}
-			System.out.println("");
-		}
 
 		//make histogram
-//		Imgproc.calcHist();
+
 	}
+
 
 	//self-explanatory value
 	private double[] getChromaticity(double[] pixelRGB) {
 		double[] chromaticity = new double[2];
 
 		//pixelRGB indices follow RGB => 0 -> R, 1 -> G, 2 -> B
-		double r = pixelRGB[0]/(pixelRGB[0]+pixelRGB[1]+pixelRGB[2]);
-		double g = pixelRGB[1]/(pixelRGB[0]+pixelRGB[1]+pixelRGB[2]);
+		double newRGB = (pixelRGB[0]+pixelRGB[1]+pixelRGB[2]);
+		double r, g;
+
+		if (newRGB == 0) {
+			r = 0;
+			g = 0;
+		} else {
+			r = pixelRGB[0]/newRGB;
+			g = pixelRGB[1]/newRGB;
+		}
+
+		//If colours are a pure red or green it causes an error.
+		//These if statements just slightly reduce the chromacity so there isn't an error.
+		if (r == 1) {
+			r = 0.9999;
+		}
+		if (g == 1) {
+			g = 0.9999;
+		}
+
 		chromaticity[0] = r;
 		chromaticity[1] = g;
 
 		return chromaticity; //returns array of 2 values for r, g
 	}
 
-	private void compareHistograms(double[][] firstHistogram, double[][] secondHistogram, double pixelTotal) {
-		//pixelTotal has to be used to divide, to normalize value
-		for(int i=0; i<7; i++) {
-			for(int j=0; j<7; j++) {
-				if (firstHistogram[i][j] < secondHistogram[i][j]) {
-					colourBuckets[i][j] = (firstHistogram[i][j]/pixelTotal);
-				} else {
-					colourBuckets[i][j] = (secondHistogram[i][j]/pixelTotal);
-				}
+	private void compareHistograms(double[][] firstHistogram, double[][] secondHistogram, int pixelCount, int histogramLength) {
 
+		//pixelTotal has to be used to divide, to normalize value
+		double intersection = 0;
+		for(int i=0; i<histogramLength; i++) {
+			for(int j=0; j<histogramLength; j++) {
+				if (firstHistogram[i][j] < secondHistogram[i][j]) {
+					intersection += firstHistogram[i][j];
+				} else {
+					intersection += secondHistogram[i][j];
+				}
 			}
+		}
+
+		double pixelValue = intersection;
+		colourBuckets.add(pixelValue);
+	}
+
+	public void openWindow() {
+		try {
+//			FXMLLoader fxmlLoader = new FXMLLoader();
+//
+//			fxmlLoader.setLocation(getClass().getResource("GraphWindow.fxml"));
+			FXMLLoader loader = new FXMLLoader(getClass().getResource("GraphWindow.fxml"));
+			BorderPane root = (BorderPane)loader.load();
+
+			Scene scene = new Scene(root, 600, 400);
+			Stage stage = new Stage();
+
+			stage.setTitle("Bar Chart Sample");
+			final NumberAxis xAxis = new NumberAxis();
+			final CategoryAxis yAxis = new CategoryAxis();
+			final BarChart<Number,String> bc =
+					new BarChart<Number,String>(xAxis,yAxis);
+			bc.setTitle("Country Summary");
+			xAxis.setLabel("Value");
+			xAxis.setTickLabelRotation(90);
+			yAxis.setLabel("Country");
+
+			XYChart.Series series1 = new XYChart.Series();
+			series1.setName("2003");
+			series1.getData().add(new XYChart.Data(25601.34, "Austria"));
+			series1.getData().add(new XYChart.Data(20148.82, "Brazil"));
+			series1.getData().add(new XYChart.Data(10000, "France"));
+			series1.getData().add(new XYChart.Data(35407.15, "Italy"));
+			series1.getData().add(new XYChart.Data(12000, "USA"));
+
+			XYChart.Series series2 = new XYChart.Series();
+			series2.setName("2004");
+			series2.getData().add(new XYChart.Data(57401.85, "Austria"));
+			series2.getData().add(new XYChart.Data(41941.19, "Brazil"));
+			series2.getData().add(new XYChart.Data(45263.37, "France"));
+			series2.getData().add(new XYChart.Data(117320.16, "Italy"));
+			series2.getData().add(new XYChart.Data(14845.27, "USA"));
+
+			XYChart.Series series3 = new XYChart.Series();
+			series3.setName("2005");
+			series3.getData().add(new XYChart.Data(45000.65, "Austria"));
+			series3.getData().add(new XYChart.Data(44835.76, "Brazil"));
+			series3.getData().add(new XYChart.Data(18722.18, "France"));
+			series3.getData().add(new XYChart.Data(17557.31, "Italy"));
+			series3.getData().add(new XYChart.Data(92633.68, "USA"));
+
+
+			stage.setTitle("New Window");
+			stage.setScene(scene);
+			stage.show();
+		} catch (IOException e) {
+			Logger logger = Logger.getLogger(getClass().getName());
+			logger.log(Level.SEVERE, "Failed to create new Window.", e);
 		}
 	}
 }
