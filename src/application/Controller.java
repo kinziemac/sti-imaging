@@ -42,7 +42,6 @@ public class Controller {
 	private VideoCapture capture;
 	private ScheduledExecutorService timer;
 	private List<Mat> framesArray = new ArrayList<Mat>();
-	private List<Double> colourBuckets = new ArrayList<Double>();
 	private double[][] columnArray;
 
 
@@ -68,7 +67,6 @@ public class Controller {
 		//this will reset framesArray when another video is loaded
 		if(framesArray.size() != 0) {
 			framesArray = new ArrayList<Mat>();
-			colourBuckets = new ArrayList<Double>();
 		}
 
 		 capture = new VideoCapture(getImageFilename()); // open video file
@@ -101,7 +99,6 @@ public class Controller {
 					} else { // reach the end of the video
 							//capture.set(Videoio.CAP_PROP_POS_FRAMES, 0);
 							capture.release();
-							System.out.println("return");
 							return;
 						}
 					}
