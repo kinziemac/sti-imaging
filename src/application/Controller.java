@@ -7,24 +7,25 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
 import java.lang.*;
 
 import org.opencv.core.Mat;
 import org.opencv.videoio.VideoCapture;
 import org.opencv.videoio.Videoio;
+
 import javafx.event.ActionEvent;
 import javafx.fxml.*;
 import javafx.scene.control.Slider;
+import javafx.scene.text.Text;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import utilities.Utilities;
 
 import java.awt.image.BufferedImage;
-import java.awt.Color;
 import javax.imageio.ImageIO;
 
 
@@ -32,12 +33,18 @@ public class Controller {
 
 	@FXML private ImageView imageView;
 	@FXML private Slider slider;
+	@FXML private Text text;
 
 	private VideoCapture capture;
 	private ScheduledExecutorService timer;
 	private List<Mat> framesArray = new ArrayList<Mat>();
 	private double[][] columnArray;
 	private double[][][] copyOfPixels;
+	private String warning = "Please Select Video First";
+	private String loading = "Video Selected, let it run through completely";
+	private String complete = "Created Image, check sti-imaging project folder";
+	private String longTime = "This will take a while.. (9+ seconds)";
+
 
 
 	private String getImageFilename() {
@@ -60,6 +67,8 @@ public class Controller {
 		if(framesArray.size() != 0) {
 			framesArray = new ArrayList<Mat>();
 		}
+
+		text.setText(loading);
 
 		 capture = new VideoCapture(getImageFilename()); // open video file
 		 if (capture.isOpened()) { // open successfully
@@ -124,6 +133,7 @@ public class Controller {
 
 			this.makeCopy(frameLength, frameRows, "./copyImageCols.png");
 		} else {
+			text.setText(warning);
 			System.out.println("No video was selected");
 		}
 	}
@@ -148,6 +158,7 @@ public class Controller {
 
 			this.makeCopy(frameLength, frameCols, "./copyImageRows.png");
 		} else {
+			text.setText(warning);
 			System.out.println("No video was selected");
 		}
 	}
@@ -173,6 +184,7 @@ public class Controller {
 
 		try {
 			ImageIO.write(newImage, "png", new File(fileName));
+			text.setText(complete);
 			System.out.println("created new image");
 		} catch (IOException e) {
 			System.out.println("could not open new file");
@@ -227,6 +239,7 @@ public class Controller {
 			}
 			this.createImage();
 		} else {
+			text.setText(warning);
 			System.out.println("No video was selected");
 		}
 	}
@@ -275,6 +288,7 @@ public class Controller {
 	}
 
 	public void createImage() {
+		text.setText(longTime);
 		Mat frame = framesArray.get(0);
 		int frameLength = framesArray.size()-1;
 		int frameCols = frame.cols();
@@ -297,6 +311,7 @@ public class Controller {
 
 		try {
 			ImageIO.write(newImage, "png", new File("./grayscaleImage.png"));
+			text.setText(complete);
 			System.out.println("created grayscaleImage.png");
 		} catch (IOException e) {
 			System.out.println("could not open new file");

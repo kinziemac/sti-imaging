@@ -70,7 +70,7 @@
                   <Insets left="100.0" right="100.0" />
                </VBox.margin>
             </Slider>
-            <Text styleClass="warning-text">Please select "Open Video" button before trying to create any images</Text>
+            <Text fx:id="text" styleClass="warning-text">Please select "Open Video" button before trying to create any images</Text>
          </children>
          <BorderPane.margin>
             <Insets top="10.0" />
