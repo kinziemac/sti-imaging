@@ -24,6 +24,7 @@ import javafx.stage.Stage;
 import utilities.Utilities;
 
 import java.awt.image.BufferedImage;
+import java.awt.Color;
 import javax.imageio.ImageIO;
 
 
@@ -36,6 +37,7 @@ public class Controller {
 	private ScheduledExecutorService timer;
 	private List<Mat> framesArray = new ArrayList<Mat>();
 	private double[][] columnArray;
+	private double[][][] copyOfPixels;
 
 
 	private String getImageFilename() {
@@ -47,6 +49,7 @@ public class Controller {
 	    	return null;
 
 	    return file.getAbsolutePath();
+		//return "resources/RedVideoWipeLower.mov";
 	}
 
 
@@ -103,50 +106,129 @@ public class Controller {
 
 
 	@FXML
-	protected void checkColours() {
-		System.out.println("Warning, this will take a long time (10+ seconds)");
+	protected void copyPixelsCols() {
+		if(framesArray.size() > 1) {
+			Mat frame = framesArray.get(0);
+			int frameLength = framesArray.size();
+			int frameCols = frame.cols();
+			int frameRows = frame.rows();
+			copyOfPixels = new double[frameLength][frameRows][3];
 
-		Mat frame = framesArray.get(0);
-		int frameLength = framesArray.size();
-		int frameCols = frame.cols();
-		columnArray = new double[frameLength-1][frameCols];
-
-		for(int i=0; i<frameLength-1; i++) {
-			Mat firstFrame = framesArray.get(i);
-			Mat afterFrame = framesArray.get(i+1);
-
-			//dimensions of video
-			int rowSize = firstFrame.rows();
-			int colSize = firstFrame.cols();
-
-			//dimensions of histograms - Sturges' Rule
-			int histogramDimensions = (int) (1.0 + Math.log(rowSize)/Math.log(2));
-
-			//gets full pixel count
-			for(int col=0; col<colSize; col++) {
-				//get ready to make 2 new histograms
-				double[][] firstHistogram = new double[histogramDimensions][histogramDimensions];
-				double[][] secondHistogram = new double[histogramDimensions][histogramDimensions];
-
-				for(int row=0; row<rowSize; row++) {
-					//histogram for firstFrame or frame@(t)
-					double[] rgbFirst = firstFrame.get(row, col);
-					double[] chromaticityFirst = this.getChromaticity(rgbFirst);
-					int positionRedFirst = (int) Math.floor(chromaticityFirst[0] * histogramDimensions);
-					int positionGreenFirst = (int) Math.floor(chromaticityFirst[1] * histogramDimensions);
-				    firstHistogram[positionRedFirst][positionGreenFirst] += (1.0/rowSize);
-
-					//histogram for afterFrame or frame@(t+1)
-					double[] rgbSecond = afterFrame.get(row, col);
-					double[] chromaticitySecond = this.getChromaticity(rgbSecond);
-					int positionRedSecond = (int) Math.floor(chromaticitySecond[0] * histogramDimensions);
-					int positionGreenSecond = (int) Math.floor(chromaticitySecond[1] * histogramDimensions);
-					secondHistogram[positionRedSecond][positionGreenSecond] += (1.0/rowSize);
+			for (int i = 0; i < frameLength; i++) {
+				for (int j = 0; j < frameRows; j++) {
+					Mat newFrame = framesArray.get(i);
+					double[] rgb = newFrame.get(j, frameCols / 2);
+					copyOfPixels[i][j] = rgb;
 				}
-				this.compareHistograms(firstHistogram, secondHistogram, histogramDimensions, i, col);
+			}
+
+			this.makeCopy(frameLength, frameRows, "./copyImageCols.png");
+		} else {
+			System.out.println("No video was selected");
+		}
+	}
+
+	@FXML
+	protected void copyPixelsRows() {
+		if(framesArray.size() > 1) {
+			Mat frame = framesArray.get(0);
+			int frameLength = framesArray.size();
+
+			int frameCols = frame.cols();
+			int frameRows = frame.rows();
+			copyOfPixels = new double[frameLength][frameCols][3];
+
+			for (int i = 0; i < frameLength; i++) {
+				for (int j = 0; j < frameCols; j++) {
+					Mat newFrame = framesArray.get(i);
+					double[] rgb = newFrame.get(frameRows / 2, j);
+					copyOfPixels[i][j] = rgb;
+				}
+			}
+
+			this.makeCopy(frameLength, frameCols, "./copyImageRows.png");
+		} else {
+			System.out.println("No video was selected");
+		}
+	}
+
+
+	public void makeCopy(int width, int height, String fileName) {
+		BufferedImage newImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+
+		for (int i = 0; i < width; i++) {
+			for (int j = 0; j < height; j++) {
+				double[] color = copyOfPixels[i][j];
+				int r = (int) color[2];
+				int g = (int) color[1];
+				int b = (int) color[0];
+
+				int rgb = r;
+				rgb = (rgb << 8) + g;
+				rgb = (rgb << 8) + b;
+
+				newImage.setRGB(i, j, rgb);
 			}
 		}
-		this.createImage();
+
+		try {
+			ImageIO.write(newImage, "png", new File(fileName));
+			System.out.println("created new image");
+		} catch (IOException e) {
+			System.out.println("could not open new file");
+		}
+	}
+
+
+	@FXML
+	protected void checkColours() {
+		if(framesArray.size() > 1) {
+			Mat frame = framesArray.get(0);
+			int frameLength = framesArray.size();
+			System.out.println("Warning, this will take a long time (10+ seconds)");
+
+			int frameCols = frame.cols();
+			columnArray = new double[frameLength - 1][frameCols];
+
+			for (int i = 0; i < frameLength - 1; i++) {
+				Mat firstFrame = framesArray.get(i);
+				Mat afterFrame = framesArray.get(i + 1);
+
+				//dimensions of video
+				int rowSize = firstFrame.rows();
+				int colSize = firstFrame.cols();
+
+				//dimensions of histograms - Sturges' Rule
+				int histogramDimensions = (int) (1.0 + Math.log(rowSize) / Math.log(2));
+
+				//gets full pixel count
+				for (int col = 0; col < colSize; col++) {
+					//get ready to make 2 new histograms
+					double[][] firstHistogram = new double[histogramDimensions][histogramDimensions];
+					double[][] secondHistogram = new double[histogramDimensions][histogramDimensions];
+
+					for (int row = 0; row < rowSize; row++) {
+						//histogram for firstFrame or frame@(t)
+						double[] rgbFirst = firstFrame.get(row, col);
+						double[] chromaticityFirst = this.getChromaticity(rgbFirst);
+						int positionRedFirst = (int) Math.floor(chromaticityFirst[0] * histogramDimensions);
+						int positionGreenFirst = (int) Math.floor(chromaticityFirst[1] * histogramDimensions);
+						firstHistogram[positionRedFirst][positionGreenFirst] += (1.0 / rowSize);
+
+						//histogram for afterFrame or frame@(t+1)
+						double[] rgbSecond = afterFrame.get(row, col);
+						double[] chromaticitySecond = this.getChromaticity(rgbSecond);
+						int positionRedSecond = (int) Math.floor(chromaticitySecond[0] * histogramDimensions);
+						int positionGreenSecond = (int) Math.floor(chromaticitySecond[1] * histogramDimensions);
+						secondHistogram[positionRedSecond][positionGreenSecond] += (1.0 / rowSize);
+					}
+					this.compareHistograms(firstHistogram, secondHistogram, histogramDimensions, i, col);
+				}
+			}
+			this.createImage();
+		} else {
+			System.out.println("No video was selected");
+		}
 	}
 
 	private void compareHistograms(double[][] firstHistogram, double[][] secondHistogram, int histogramLength, int frame, int column) {
@@ -205,15 +287,11 @@ public class Controller {
 
 		for (int i = 0; i < height; i++) {
 			for (int j = 0; j < width; j++) {
-				int value = 255;
-				//0.7 is the threshold
+				int value = (int) (columnArray[i][j]*255.0);
 				if (columnArray[i][j] < 0.7) value = 0;
-
 				int rgb = value << 16 | value << 8 | value;
-				int xCoordinate = i;
-				int yCoordinate = (width-1) - j;
 
-				newImage.setRGB(xCoordinate, yCoordinate, rgb);
+				newImage.setRGB(i, j, rgb);
 			}
 		}
 

@@ -29,7 +29,23 @@
                         <Font size="17.0" />
                      </font>
                   </Button>
-                  <Button styleClass="imageButton" fx:id="imageButton" mnemonicParsing="false" onAction="#checkColours" prefHeight="40.0" prefWidth="170.0" text="Make Image">
+                  <Button styleClass="imageButton" fx:id="verticalCopy" mnemonicParsing="false" onAction="#copyPixelsCols" prefHeight="40.0" prefWidth="170.0" text="Column Pixels">
+                     <HBox.margin>
+                        <Insets left="20.0" top="20.0" />
+                     </HBox.margin>
+                     <font>
+                        <Font size="17.0" />
+                     </font>
+                  </Button>
+                  <Button styleClass="imageButton" fx:id="horizontalCopy" mnemonicParsing="false" onAction="#copyPixelsRows" prefHeight="40.0" prefWidth="170.0" text="Row Pixels">
+                     <HBox.margin>
+                        <Insets left="20.0" top="20.0" />
+                     </HBox.margin>
+                     <font>
+                        <Font size="17.0" />
+                     </font>
+                  </Button>
+                  <Button styleClass="imageButton" fx:id="imageButton" mnemonicParsing="false" onAction="#checkColours" prefHeight="40.0" prefWidth="170.0" text="Histogram Image">
                      <HBox.margin>
                         <Insets left="20.0" top="20.0" />
                      </HBox.margin>
@@ -54,6 +70,7 @@
                   <Insets left="100.0" right="100.0" />
                </VBox.margin>
             </Slider>
+            <Text styleClass="warning-text">Please select "Open Video" button before trying to create any images</Text>
          </children>
          <BorderPane.margin>
             <Insets top="10.0" />

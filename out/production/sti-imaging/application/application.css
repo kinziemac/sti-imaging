@@ -28,4 +28,8 @@
 	-fx-text-fill: #fff8f0;
 }
 
+.warning-text {
+    -fx-fill: #fff8f0;
+}
+
 /* JavaFX CSS - Leave this comment until you have at least create one rule which uses -fx-Property */
