@@ -69,11 +69,14 @@ public class Controller {
 		}
 
 		text.setText(loading);
+		String videoLink = getImageFilename();
 
-		 capture = new VideoCapture(getImageFilename()); // open video file
-		 if (capture.isOpened()) { // open successfully
-			 createFrameGrabber(); //plays video
-		 }
+		if (videoLink!= null) {
+			capture = new VideoCapture(videoLink); // open video file
+			if (capture.isOpened()) { // open successfully
+				createFrameGrabber(); //plays video
+			}
+		}
 	}
 
 	// this just plays the video
@@ -193,7 +196,7 @@ public class Controller {
 
 
 	@FXML
-	protected void checkColours() {
+	protected void histogramIntersection() {
 		if(framesArray.size() > 1) {
 			Mat frame = framesArray.get(0);
 			int frameLength = framesArray.size();

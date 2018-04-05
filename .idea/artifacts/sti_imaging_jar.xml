@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="sti-imaging:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/sti_imaging_jar</output-path>
+    <root id="archive" name="sti-imaging.jar">
+      <element id="module-output" name="sti-imaging" />
+      <element id="extracted-dir" path="/usr/local/Cellar/opencv/3.4.1_2/share/OpenCV/java/opencv-341.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>

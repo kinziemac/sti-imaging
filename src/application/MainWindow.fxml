@@ -45,7 +45,7 @@
                         <Font size="17.0" />
                      </font>
                   </Button>
-                  <Button styleClass="imageButton" fx:id="imageButton" mnemonicParsing="false" onAction="#checkColours" prefHeight="40.0" prefWidth="170.0" text="Histogram Image">
+                  <Button styleClass="imageButton" fx:id="imageButton" mnemonicParsing="false" onAction="#histogramIntersection" prefHeight="40.0" prefWidth="170.0" text="Histogram Image">
                      <HBox.margin>
                         <Insets left="20.0" top="20.0" />
                      </HBox.margin>
