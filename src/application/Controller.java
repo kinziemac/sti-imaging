@@ -52,34 +52,32 @@ public class Controller {
 	    fileName.setTitle("Select Video:");
 	    File file = fileName.showOpenDialog(new Stage());
 
-	    if(file == null)
-	    	return null;
+	    if(file == null) return null;
 
 	    return file.getAbsolutePath();
-		//return "resources/RedVideoWipeLower.mov";
+
 	}
 
 
 	@FXML
 	protected void openImage(ActionEvent event) throws InterruptedException {
 
-		//this will reset framesArray when another video is loaded
-		if(framesArray.size() != 0) {
+		if(framesArray.size() != 0)
 			framesArray = new ArrayList<Mat>();
-		}
+
 
 		text.setText(loading);
 		String videoLink = getImageFilename();
 
 		if (videoLink!= null) {
 			capture = new VideoCapture(videoLink); // open video file
-			if (capture.isOpened()) { // open successfully
-				createFrameGrabber(); //plays video
-			}
+			if (capture.isOpened())
+				createFrameGrabber();
+
 		}
 	}
 
-	// this just plays the video
+	// Plays the video
 	protected void createFrameGrabber() throws InterruptedException {
 		if (capture != null && capture.isOpened()) { // the video must be open
 			double framePerSecond = capture.get(Videoio.CAP_PROP_FPS);
@@ -98,8 +96,7 @@ public class Controller {
 						double totalFrameCount = capture.get(Videoio.CAP_PROP_FRAME_COUNT);
 						slider.setValue(currentFrameNumber / totalFrameCount * (slider.getMax() - slider.getMin()));
 
-					} else { // reach the end of the video
-							//capture.set(Videoio.CAP_PROP_POS_FRAMES, 0);
+					} else {
 							capture.release();
 						}
 					}
@@ -167,7 +164,7 @@ public class Controller {
 	}
 
 
-	public void makeCopy(int width, int height, String fileName) {
+	private void makeCopy(int width, int height, String fileName) {
 		BufferedImage newImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 
 		for (int i = 0; i < width; i++) {
