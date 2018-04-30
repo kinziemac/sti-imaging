@@ -1,0 +1,35 @@
+.BorderContainer {
+	-fx-background-color: linear-gradient(from 0% 0% to 100% 100%, #1c2541 0%, #3A506B 100%); 
+}
+
+.VboxContainer {
+	-fx-alignment: center;
+}
+
+.LowerContainer {
+	-fx-alignment: center;
+}
+
+.ButtonContainer {
+	-fx-alignment: center;
+}
+
+.slider {
+	/*-fx-background-color: #385F71; */
+}
+
+.openButton {
+	-fx-background-color: #fff8f0;
+	-fx-text-fill: #9E2b25;
+}
+
+.imageButton {
+	-fx-background-color: #9E2b25; 
+	-fx-text-fill: #fff8f0;
+}
+
+.warning-text {
+    -fx-fill: #fff8f0;
+}
+
+/* JavaFX CSS - Leave this comment until you have at least create one rule which uses -fx-Property */
